@@ -12,6 +12,9 @@ const blogRules = {
 };
 
 function parseBlog(body) {
+  if (body.sections !== undefined && !Array.isArray(body.sections)) {
+    throw new HttpError(400, 'Sections must be a list');
+  }
   const fields = validate(body, blogRules);
   return {
     title: fields.title,
@@ -20,6 +23,7 @@ function parseBlog(body) {
     content: fields.content,
     status: fields.status,
     sectionId: fields.sectionId || null,
+    ...(body.sections === undefined ? {} : { sections: body.sections }),
   };
 }
 
@@ -51,6 +55,9 @@ export const blogController = {
   },
   async getPublic(req, res) {
     res.json({ post: await blogService.get(req.params.slug, false) });
+  },
+  async adminGet(req, res) {
+    res.json({ post: await blogService.getById(req.params.id) });
   },
   async adminList(req, res) {
     const result = await blogService.list({

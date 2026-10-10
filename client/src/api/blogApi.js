@@ -10,6 +10,7 @@ export const blogApi = {
     return apiRequest(`/api/blogs${suffix}`);
   },
   get: (slug) => apiRequest(`/api/blogs/${encodeURIComponent(slug)}`),
+  adminGet: (id) => apiRequest(`/api/admin/blogs/${id}`),
   adminList: (params = {}) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -22,6 +23,11 @@ export const blogApi = {
     method: post.id ? 'PUT' : 'POST',
     body: JSON.stringify(post),
   }),
+  uploadImage: (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return apiRequest('/api/admin/blogs/images', { method: 'POST', body: formData });
+  },
   remove: (id) => apiRequest(`/api/admin/blogs/${id}`, { method: 'DELETE' }),
   publish: (id) => apiRequest(`/api/admin/blogs/${id}/publish`, { method: 'PATCH' }),
   unpublish: (id) => apiRequest(`/api/admin/blogs/${id}/unpublish`, { method: 'PATCH' }),

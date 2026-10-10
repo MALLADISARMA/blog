@@ -22,7 +22,8 @@ async function getCsrfToken() {
 async function request(path, options = {}, retryCsrf = true) {
   const method = (options.method || 'GET').toUpperCase();
   const headers = new Headers(options.headers || {});
-  if (options.body !== undefined) headers.set('Content-Type', 'application/json');
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  if (options.body !== undefined && !isFormData) headers.set('Content-Type', 'application/json');
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
     headers.set('X-CSRF-Token', csrfToken || await getCsrfToken());
   }

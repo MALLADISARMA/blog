@@ -1,15 +1,16 @@
 # Personal Blog Platform
 
-A full-stack personal blog with a public site for reading published articles and a private dashboard for managing posts and sections. The project is built with React, Express, and PostgreSQL.
+A full-stack personal blog with a public site for reading published blogs and a private dashboard for managing blogs and their nested content. The project is built with React, Express, and PostgreSQL.
 
 ## Features
 
-- Public article listing, article pages, and section filtering
-- Admin dashboard for creating, editing, publishing, and deleting posts
-- Nested sections with validation for parent changes and deletion
+- Public blog listing and long-form reading pages
+- Admin dashboard for creating, editing, publishing, and deleting blogs
+- Blog-owned sections with rich content, nested hierarchy, and stable ordering
 - One administrator account; there is no public sign-up or registration page
 - Session-based authentication, password hashing, CSRF protection, and rate-limited login
-- Article content is displayed as text rather than interpreted as HTML
+- Rich-text article editing with formatting, lists, and locally uploaded images
+- Server-side and browser-side sanitization for article HTML
 
 ## Technology
 
@@ -116,9 +117,11 @@ You can also start the components separately. Start PostgreSQL with `docker comp
 
 ## API overview
 
-Public published posts are available at `GET /api/blogs`. Use `page` (default `1`) and `limit` (default `10`, maximum `100`) for pagination, `search` for title/content search, `sectionId` to filter, and `sort` (`publishedAt`, `createdAt`, `updatedAt`, or `title`) with `order` (`asc` or `desc`). Section-filtered posts are also available from `GET /api/sections/:id/blogs`; the public section tree is at `GET /api/sections/tree`.
+Public published blogs are available at `GET /api/blogs`. Use `page` (default `1`) and `limit` (default `10`, maximum `100`) for pagination, `search` for blog and nested-section title/content search, and `sort` (`publishedAt`, `createdAt`, `updatedAt`, or `title`) with `order` (`asc` or `desc`). `GET /api/blogs/:slug` returns a blog with its nested content sections.
 
-Administrator post operations use `POST /api/admin/blogs`, `GET /api/admin/blogs`, `PUT` or `DELETE /api/admin/blogs/:id`, and `PATCH /api/admin/blogs/:id/publish` or `/unpublish`. Section changes use `POST /api/admin/sections`, `PUT /api/admin/sections/:id`, and `DELETE /api/admin/sections/:id`. Admin requests require a valid session and CSRF token. The existing `/api/blogs/admin/...` and `/api/sections/admin/...` routes remain available for compatibility.
+Each blog can own a tree of content sections. The admin editor saves each section's rich text, parent/child relationship, and display order together with its blog; the database enforces that a subsection cannot belong to another blog. The tree is limited to 500 sections and 100 levels per blog to keep requests bounded. The additive `002-blog-sections.sql` migration runs during the standard development startup; if starting components separately, apply it with `npm --prefix server run migrate` before launching the API. The admin detail endpoint is `GET /api/admin/blogs/:id`; existing standalone topic/category endpoints remain available for compatibility.
+
+Administrator post operations use `POST /api/admin/blogs`, `GET /api/admin/blogs`, `PUT` or `DELETE /api/admin/blogs/:id`, and `PATCH /api/admin/blogs/:id/publish` or `/unpublish`. Upload an image with multipart field `image` to `POST /api/admin/blogs/images`; uploads accept JPEG, PNG, GIF, and WebP files up to 5 MB. Admin requests require a valid session and CSRF token. Uploaded images are served publicly from `/uploads/` and stored in `server\uploads` by default. Set `UPLOAD_DIR` in `server\.env` to choose another persistent directory. Back up this directory along with the database; deployments with ephemeral local storage must provide persistent disk or replace this storage with an object-storage service. Section changes use `POST /api/admin/sections`, `PUT /api/admin/sections/:id`, and `DELETE /api/admin/sections/:id`. The existing `/api/blogs/admin/...` and `/api/sections/admin/...` routes remain available for compatibility.
 
 ## Project structure
 

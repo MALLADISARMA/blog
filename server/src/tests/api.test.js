@@ -2,10 +2,15 @@ import test, { before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import bcrypt from 'bcrypt';
 import request from 'supertest';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 process.env.NODE_ENV = 'test';
 process.env.USE_MEMORY_DB = 'true';
 process.env.SESSION_SECRET = 'test-session-secret-at-least-32-characters';
+const testUploadDirectory = await mkdtemp(path.join(tmpdir(), 'personal-blog-test-'));
+process.env.UPLOAD_DIR = testUploadDirectory;
 
 const [{ default: app }, { memoryStore }] = await Promise.all([
   import('../app.js'),
@@ -76,6 +81,132 @@ test('admin can log in and create a published story with CSRF protection', async
     .expect(201);
   assert.equal(created.body.post.slug, 'a-new-story');
   await request(app).get('/api/blogs/a-new-story').expect(200);
+});
+
+test('rich content is sanitized before it is saved and published', async () => {
+  const agent = request.agent(app);
+  const initialCsrf = await agent.get('/api/auth/csrf').expect(200);
+  await agent.post('/api/auth/login')
+    .set('X-CSRF-Token', initialCsrf.body.csrfToken)
+    .send({ email: 'admin@example.com', password: 'correct horse battery staple' })
+    .expect(200);
+  const csrf = (await agent.get('/api/auth/csrf').expect(200)).body.csrfToken;
+  const created = await agent.post('/api/admin/blogs')
+    .set('X-CSRF-Token', csrf)
+    .send({
+      title: 'Formatted story',
+      content: '<p><strong>Safe</strong><span style="font-weight:700;color:red">Pasted bold</span><script>alert(1)</script><img src="https://example.com/evil.png" onerror="alert(1)"><img src="/uploads/test-file.png"></p>',
+      status: 'published',
+    })
+    .expect(201);
+
+  assert.match(created.body.post.content, /<strong>Safe<\/strong>/);
+  assert.match(created.body.post.content, /<strong>Pasted bold<\/strong>/);
+  assert.doesNotMatch(created.body.post.content, /script|onerror|example\.com/);
+  assert.match(created.body.post.content, /src="\/uploads\/test-file\.png"/);
+});
+
+test('a single blog saves and returns editable nested section content and search locations', async () => {
+  const agent = request.agent(app);
+  const initialCsrf = await agent.get('/api/auth/csrf').expect(200);
+  await agent.post('/api/auth/login')
+    .set('X-CSRF-Token', initialCsrf.body.csrfToken)
+    .send({ email: 'admin@example.com', password: 'correct horse battery staple' })
+    .expect(200);
+  const csrf = (await agent.get('/api/auth/csrf').expect(200)).body.csrfToken;
+  const created = await agent.post('/api/admin/blogs')
+    .set('X-CSRF-Token', csrf)
+    .send({
+      title: 'One complete guide',
+      excerpt: 'An introduction to the complete guide.',
+      content: '<p>Main introduction</p>',
+      status: 'published',
+      sections: [{
+        title: 'Frameworks',
+        content: '<p>Framework overview</p>',
+        children: [{
+          title: 'ORM',
+          content: '<p><strong>Object-relational mapping</strong> details.</p>',
+          children: [],
+        }],
+      }],
+    })
+    .expect(201);
+  const blogId = created.body.post.id;
+  const topSection = created.body.post.sections[0];
+  const nestedSection = topSection.children[0];
+  assert.match(nestedSection.content, /<strong>Object-relational mapping<\/strong>/);
+
+  const publicBlog = await request(app).get('/api/blogs/one-complete-guide').expect(200);
+  assert.equal(publicBlog.body.post.sections[0].title, 'Frameworks');
+  assert.equal(publicBlog.body.post.sections[0].children[0].title, 'ORM');
+  assert.equal(publicBlog.body.post.sections[0].children[0].id, nestedSection.id);
+
+  const search = await request(app).get('/api/blogs?search=ORM').expect(200);
+  assert.equal(search.body.posts.length, 1);
+  assert.deepEqual(search.body.posts[0].sectionMatches, [{
+    id: nestedSection.id,
+    title: 'ORM',
+    path: 'Frameworks → ORM',
+  }]);
+
+  const edited = await agent.put(`/api/admin/blogs/${blogId}`)
+    .set('X-CSRF-Token', csrf)
+    .send({
+      title: 'One complete guide',
+      excerpt: 'An introduction to the complete guide.',
+      content: '<p>Main introduction</p>',
+      status: 'published',
+      sections: [{
+        ...topSection,
+        title: 'Core frameworks',
+        children: [{ ...nestedSection, content: '<p>Updated ORM notes.</p>', children: [] }],
+      }],
+    })
+    .expect(200);
+  assert.equal(edited.body.post.sections[0].id, topSection.id);
+  assert.equal(edited.body.post.sections[0].children[0].id, nestedSection.id);
+  assert.equal(edited.body.post.sections[0].title, 'Core frameworks');
+  assert.match(edited.body.post.sections[0].children[0].content, /Updated ORM notes/);
+
+  const adminRead = await agent.get(`/api/admin/blogs/${blogId}`).expect(200);
+  assert.equal(adminRead.body.post.sections[0].children[0].id, nestedSection.id);
+});
+
+test('image uploads require admin and CSRF, validate bytes, and are served publicly', async () => {
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lJ8AAAAASUVORK5CYII=',
+    'base64',
+  );
+  const agent = request.agent(app);
+  const csrf = (await agent.get('/api/auth/csrf').expect(200)).body.csrfToken;
+  await agent.post('/api/admin/blogs/images')
+    .set('X-CSRF-Token', csrf)
+    .attach('image', png, { filename: 'tiny.png', contentType: 'image/png' })
+    .expect(401);
+
+  await agent.post('/api/auth/login')
+    .set('X-CSRF-Token', csrf)
+    .send({ email: 'admin@example.com', password: 'correct horse battery staple' })
+    .expect(200);
+  const freshCsrf = (await agent.get('/api/auth/csrf').expect(200)).body.csrfToken;
+  await agent.post('/api/admin/blogs/images')
+    .attach('image', png, { filename: 'tiny.png', contentType: 'image/png' })
+    .expect(403);
+
+  const uploaded = await agent.post('/api/admin/blogs/images')
+    .set('X-CSRF-Token', freshCsrf)
+    .attach('image', png, { filename: 'tiny.png', contentType: 'image/png' })
+    .expect(201);
+  assert.match(uploaded.body.url, /^\/uploads\/[0-9a-f-]+\.png$/i);
+  const served = await request(app).get(uploaded.body.url).expect(200);
+  assert.match(served.headers['content-type'], /image\/png/);
+  assert.deepEqual(served.body, png);
+
+  await agent.post('/api/admin/blogs/images')
+    .set('X-CSRF-Token', freshCsrf)
+    .attach('image', Buffer.from('not an image'), { filename: 'fake.png', contentType: 'image/png' })
+    .expect(415);
 });
 
 test('admin publish and unpublish endpoints require authentication and CSRF', async () => {
@@ -276,4 +407,5 @@ test('section tree rejects a cyclic parent move and protects admin writes', asyn
 after(async () => {
   const { pool } = await import('../config/database.js');
   await pool.end();
+  await rm(testUploadDirectory, { recursive: true, force: true });
 });

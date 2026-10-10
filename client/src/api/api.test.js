@@ -30,6 +30,33 @@ test('state-changing API requests include cookies and fetch a CSRF token', async
   assert.equal(calls[1].options.headers.get('Content-Type'), 'application/json');
 });
 
+test('multipart requests include CSRF but let fetch set the boundary content type', async () => {
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith('/api/auth/csrf')) {
+      return new Response(JSON.stringify({ csrfToken: 'upload-csrf-token' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify({ url: '/uploads/image.png' }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+
+  const formData = new FormData();
+  formData.append('image', new Blob(['image']), 'image.png');
+  await apiRequest('/api/admin/blogs/images', { method: 'POST', body: formData });
+
+  const uploadCall = calls.find(({ url }) => url.endsWith('/api/admin/blogs/images'));
+  assert.ok(uploadCall);
+  assert.ok(uploadCall.options.headers.get('X-CSRF-Token'));
+  assert.equal(uploadCall.options.headers.has('Content-Type'), false);
+  assert.equal(uploadCall.options.body, formData);
+});
+
 test('API errors preserve the response status and server message', async () => {
   globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Invalid request' }), {
     status: 400,

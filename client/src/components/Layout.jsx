@@ -8,7 +8,9 @@ export function Layout({ children }) {
       <header className="site-header">
         <Link to="/" className="brand">Fieldnotes<span>.</span></Link>
         <nav aria-label="Main navigation">
-          <Link to="/">Journal</Link>
+          <Link to="/">Home</Link>
+          <Link to="/#topics">Explore</Link>
+          <Link to="/#search">Search</Link>
           {admin ? <Link to="/admin">Dashboard</Link> : <Link to="/login">Admin</Link>}
         </nav>
       </header>

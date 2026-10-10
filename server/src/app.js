@@ -10,12 +10,17 @@ import sectionRoutes from './routes/sectionRoutes.js';
 import adminBlogRoutes from './routes/adminBlogRoutes.js';
 import adminSectionRoutes from './routes/adminSectionRoutes.js';
 import { errorHandler, notFound } from './middleware/errors.js';
+import { uploadDirectory } from './config/uploads.js';
 
 const app = express();
 const allowedOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
 app.disable('x-powered-by');
 app.use(helmet());
+app.use('/uploads', express.static(uploadDirectory, {
+  immutable: true,
+  maxAge: '1y',
+}));
 app.use(cors({ origin: allowedOrigin, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());

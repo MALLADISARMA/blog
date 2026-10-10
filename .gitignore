@@ -4,6 +4,8 @@ server/node_modules/
 .env
 client/.env
 server/.env
+server/uploads/
+uploads/
 dist/
 client/dist/
 coverage/

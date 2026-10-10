@@ -64,7 +64,7 @@ export default function SectionManagementPage() {
     try {
       await sectionApi.save({ ...section, parentId: section.parentId || null });
       setSection(blankSection);
-      setNotice('Section saved.');
+      setNotice('Topic tag saved.');
       await refresh();
     } catch (saveError) {
       setError(saveError.message);
@@ -77,10 +77,10 @@ export default function SectionManagementPage() {
   }
 
   async function remove(item) {
-    if (!window.confirm(`Delete “${item.name}”? Sections with posts or child sections cannot be deleted.`)) return;
+    if (!window.confirm(`Delete “${item.name}”? Topic tags with assigned blogs or child tags cannot be deleted.`)) return;
     try {
       await sectionApi.remove(item.id);
-      setNotice('Section deleted.');
+      setNotice('Topic tag deleted.');
       await refresh();
     } catch (removeError) {
       setError(removeError.message);
@@ -89,24 +89,24 @@ export default function SectionManagementPage() {
 
   let sectionList;
   if (loading) {
-    sectionList = <output className="muted">Loading sections…</output>;
+    sectionList = <output className="muted">Loading topic tags…</output>;
   } else if (tree.length) {
     sectionList = <ul className="section-tree-admin"><SectionNodes sections={tree} onEdit={edit} onRemove={remove} /></ul>;
   } else {
-    sectionList = <p className="muted">No sections created yet.</p>;
+    sectionList = <p className="muted">No topic tags created yet.</p>;
   }
 
   return (
     <Layout>
       <div className="admin-heading">
-        <div><p className="eyebrow">Admin workspace</p><h1>Manage sections</h1></div>
+        <div><p className="eyebrow">Optional blog classification</p><h1>Manage topic tags</h1></div>
         <Link className="button secondary" to="/admin">Back to dashboard</Link>
       </div>
       {notice && <output className="success">{notice}</output>}
       {error && <p className="error" role="alert">{error}</p>}
       <div className="admin-grid sections-grid">
         <section className="form-panel">
-          <h2>{section.id ? 'Edit or move section' : 'Create section'}</h2>
+          <h2>{section.id ? 'Edit or move topic tag' : 'Create topic tag'}</h2>
           <form onSubmit={save}>
             <label htmlFor="section-name"><span>Name</span>
               <input id="section-name" value={section.name} onChange={(event) => setSection({ ...section, name: event.target.value })} required maxLength="100" />
@@ -114,22 +114,22 @@ export default function SectionManagementPage() {
             <label htmlFor="section-slug"><span>Slug <span className="muted">(optional)</span></span>
               <input id="section-slug" value={section.slug} onChange={(event) => setSection({ ...section, slug: event.target.value })} maxLength="120" />
             </label>
-            <label htmlFor="section-parent"><span>Parent section</span>
+            <label htmlFor="section-parent"><span>Parent topic tag</span>
               <select id="section-parent" value={section.parentId} onChange={(event) => setSection({ ...section, parentId: event.target.value })}>
-                <option value="">Top-level section</option>
+                <option value="">Top-level topic tag</option>
                 {flat.filter((item) => String(item.id) !== String(section.id) && !invalidParents.has(String(item.id))).map((item) => (
                   <option key={item.id} value={item.id}>{`${'— '.repeat(item.depth)}${item.name}`}</option>
                 ))}
               </select>
             </label>
             <div className="button-row">
-              <button className="button" type="submit">{section.id ? 'Save section' : 'Create section'}</button>
+              <button className="button" type="submit">{section.id ? 'Save topic tag' : 'Create topic tag'}</button>
               {section.id && <button className="button secondary" type="button" onClick={() => setSection(blankSection)}>Cancel edit</button>}
             </div>
           </form>
         </section>
         <section>
-          <h2>Section hierarchy</h2>
+          <h2>Topic tag hierarchy</h2>
           {sectionList}
         </section>
       </div>

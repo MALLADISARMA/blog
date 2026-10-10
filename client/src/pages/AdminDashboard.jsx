@@ -4,6 +4,21 @@ import { blogApi } from '../api/blogApi.js';
 import { sectionApi } from '../api/sectionApi.js';
 import { Layout } from '../components/Layout.jsx';
 import { useAuth } from '../hooks/useAuth.js';
+import { SafeArticleContent } from '../components/SafeArticleContent.jsx';
+
+function PreviewSections({ sections = [] }) {
+  return sections.length > 0 && (
+    <div className="preview-content-sections">
+      {sections.map((section) => (
+        <details key={section.id} open>
+          <summary>{section.title}</summary>
+          <SafeArticleContent content={section.content || ''} />
+          <PreviewSections sections={section.children || []} />
+        </details>
+      ))}
+    </div>
+  );
+}
 
 export default function AdminDashboard() {
   const { admin, logout } = useAuth();
@@ -48,7 +63,7 @@ export default function AdminDashboard() {
     if (!window.confirm(`Delete “${post.title}”? This cannot be undone.`)) return;
     try {
       await blogApi.remove(post.id);
-      setNotice('Story deleted.');
+      setNotice('Blog deleted.');
       await refresh();
     } catch (requestError) {
       setError(requestError.message);
@@ -59,8 +74,18 @@ export default function AdminDashboard() {
     try {
       if (post.status === 'published') await blogApi.unpublish(post.id);
       else await blogApi.publish(post.id);
-      setNotice(post.status === 'published' ? 'Story unpublished.' : 'Story published.');
+      setNotice(post.status === 'published' ? 'Blog unpublished.' : 'Blog published.');
       await refresh();
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  async function showPreview(post) {
+    setError('');
+    try {
+      const { post: fullPost } = await blogApi.adminGet(post.id);
+      setPreview(fullPost);
     } catch (requestError) {
       setError(requestError.message);
     }
@@ -95,7 +120,7 @@ export default function AdminDashboard() {
             </div>
             <div className="button-row admin-item-actions">
               <Link className="button secondary small" to={`/admin/editor/${post.id}`}>Edit</Link>
-              <button className="button secondary small" type="button" onClick={() => setPreview(post)}>Preview</button>
+              <button className="button secondary small" type="button" onClick={() => { void showPreview(post); }}>Preview</button>
               <button className="button secondary small" type="button" onClick={() => togglePublished(post)}>
                 {post.status === 'published' ? 'Unpublish' : 'Publish'}
               </button>
@@ -116,25 +141,25 @@ export default function AdminDashboard() {
         <button className="button secondary" type="button" onClick={signOut}>Sign out</button>
       </div>
       <div className="admin-actions">
-        <Link className="button" to="/admin/editor">Write a story</Link>
-        <Link className="button secondary" to="/admin/sections">Manage sections</Link>
+        <Link className="button" to="/admin/editor">Write a blog</Link>
+        <Link className="button secondary" to="/admin/sections">Manage topic tags</Link>
       </div>
       {notice && <output className="success">{notice}</output>}
       {error && <p className="error" role="alert">{error}</p>}
       <form className="admin-filters" onSubmit={applyFilters}>
-        <label htmlFor="admin-search"><span>Search title and content</span>
+        <label htmlFor="admin-search"><span>Search blogs and section content</span>
           <input id="admin-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} />
         </label>
-        <label htmlFor="admin-section"><span>Section</span>
+        <label htmlFor="admin-section"><span>Topic tag</span>
           <select id="admin-section" value={sectionId} onChange={(event) => setSectionId(event.target.value)}>
-            <option value="">All sections</option>
+            <option value="">All topic tags</option>
             {sections.map((section) => <option key={section.id} value={section.id}>{section.name}</option>)}
           </select>
         </label>
         <button className="button" type="submit">Filter</button>
       </form>
       <section aria-labelledby="admin-posts-heading">
-        <h2 id="admin-posts-heading">All stories <span className="count">{posts.length}</span></h2>
+        <h2 id="admin-posts-heading">All blogs <span className="count">{posts.length}</span></h2>
         {postList}
       </section>
       {preview && (
@@ -144,7 +169,8 @@ export default function AdminDashboard() {
             <p className="eyebrow">{preview.status} preview</p>
             <h2 id="preview-title">{preview.title}</h2>
             {preview.excerpt && <p className="article-excerpt">{preview.excerpt}</p>}
-            <div className="article-content">{preview.content}</div>
+            <SafeArticleContent content={preview.content} />
+            <PreviewSections sections={preview.sections} />
           </section>
         </dialog>
       )}
