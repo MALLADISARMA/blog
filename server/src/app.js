@@ -17,6 +17,9 @@ const allowedOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const cookieSecret = process.env.SESSION_SECRET || 'development-only-change-this-secret';
 
 app.disable('x-powered-by');
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 app.use(helmet());
 app.use('/uploads', express.static(uploadDirectory, {
   immutable: true,
