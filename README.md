@@ -25,8 +25,12 @@ A full-stack personal blog with a public site for reading published blogs and a 
 
 Install the following before setup:
 
-- Node.js 20 or newer (LTS recommended) and npm
+- Node.js 24.x and npm
 - Docker Desktop with Docker Compose
+
+## Vercel API deployment
+
+For the API project, set the Root Directory to `server` and use Node.js 24.x. Leave the Build Command, Output Directory, and Development Command at their defaults; do not use `npm run dev` as a production command. Keep `server/package-lock.json` committed so Vercel installs the tested dependency versions. The server pins `sanitize-html` and its `htmlparser2` override to avoid loading the parser's ESM-only release through CommonJS in Vercel Functions.
 
 ## First-time setup
 

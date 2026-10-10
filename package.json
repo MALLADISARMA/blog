@@ -1,6 +1,9 @@
 {
   "name": "personal-blog",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "server:dev": "npm --prefix server run dev",
