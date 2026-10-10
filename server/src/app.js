@@ -14,6 +14,7 @@ import { uploadDirectory } from './config/uploads.js';
 
 const app = express();
 const allowedOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+const cookieSecret = process.env.SESSION_SECRET || 'development-only-change-this-secret';
 
 app.disable('x-powered-by');
 app.use(helmet());
@@ -23,9 +24,17 @@ app.use('/uploads', express.static(uploadDirectory, {
 }));
 app.use(cors({ origin: allowedOrigin, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
-app.use(cookieParser());
+app.use(cookieParser(cookieSecret));
 app.use(createSessionMiddleware());
-app.use(csrf());
+app.use(csrf({
+  cookie: {
+    key: 'blog.csrf',
+    signed: true,
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  },
+}));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);

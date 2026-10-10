@@ -4,6 +4,7 @@ import { isValidEmail } from '../utils/adminCredentials.js';
 
 export const authController = {
   csrf(req, res) {
+    res.set('Cache-Control', 'no-store');
     res.json({ csrfToken: req.csrfToken() });
   },
   async login(req, res) {

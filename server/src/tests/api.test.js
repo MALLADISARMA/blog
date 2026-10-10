@@ -334,13 +334,14 @@ test('administrator can complete a create, edit, publish, section, and delete wo
 test('CSRF failures return 403 and logout invalidates the session', async () => {
   const agent = request.agent(app);
   const csrfResponse = await agent.get('/api/auth/csrf').expect(200);
-  const initialCookie = csrfResponse.headers['set-cookie'][0].split(';')[0];
+  assert.match(csrfResponse.headers['set-cookie'][0], /^blog\.csrf=s%3A/);
+  assert.equal(csrfResponse.headers['cache-control'], 'no-store');
   const login = await agent.post('/api/auth/login')
     .set('X-CSRF-Token', csrfResponse.body.csrfToken)
     .send({ email: 'admin@example.com', password: 'correct horse battery staple' })
     .expect(200);
   const authenticatedCookie = login.headers['set-cookie'][0].split(';')[0];
-  assert.notEqual(authenticatedCookie, initialCookie);
+  assert.match(authenticatedCookie, /^blog\.sid=/);
 
   const missingToken = await agent.post('/api/sections/admin')
     .send({ name: 'Missing CSRF' })
