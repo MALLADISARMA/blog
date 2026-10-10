@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://blog-amber-nu-51.vercel.app/api/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://blog-amber-nu-51.vercel.app/uploads/:path*"
+    }
+  ]
+}
