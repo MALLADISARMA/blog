@@ -1,7 +1,8 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'node:url';
 
-dotenv.config();
+dotenv.config({ path: fileURLToPath(new URL('../../.env', import.meta.url)) });
 
 const { Pool } = pg;
 
@@ -18,14 +19,10 @@ export function isMemoryMode() {
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/personal_blog',
   max: 10,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false,
 });
 
 export async function testDatabase() {
-  try {
-    await pool.query('SELECT 1');
-    return true;
-  } catch {
-    return false;
-  }
+  await pool.query('SELECT 1');
+  return true;
 }

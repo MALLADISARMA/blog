@@ -1,0 +1,30 @@
+import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import csrf from 'csurf';
+import { createSessionMiddleware } from './config/session.js';
+import authRoutes from './routes/authRoutes.js';
+import blogRoutes from './routes/blogRoutes.js';
+import sectionRoutes from './routes/sectionRoutes.js';
+import { errorHandler, notFound } from './middleware/errors.js';
+
+const app = express();
+const allowedOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+
+app.disable('x-powered-by');
+app.use(helmet());
+app.use(cors({ origin: allowedOrigin, credentials: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
+app.use(createSessionMiddleware());
+app.use(csrf());
+
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.use('/api/auth', authRoutes);
+app.use('/api/blogs', blogRoutes);
+app.use('/api/sections', sectionRoutes);
+app.use(notFound);
+app.use(errorHandler);
+
+export default app;

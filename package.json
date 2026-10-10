@@ -2,11 +2,12 @@
   "name": "personal-blog",
   "private": true,
   "scripts": {
+    "dev": "node scripts/dev.mjs",
     "server:dev": "npm --prefix server run dev",
     "server:start": "npm --prefix server run start",
     "server:test": "npm --prefix server run test",
     "client:dev": "npm --prefix client run dev",
     "client:build": "npm --prefix client run build",
-    "setup": "npm install --prefix client && npm install --prefix server"
+    "setup": "npm install --prefix server && npm install --prefix client"
   }
-}\n
+}
