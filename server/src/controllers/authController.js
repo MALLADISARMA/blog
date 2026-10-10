@@ -19,6 +19,9 @@ export const authController = {
     const admin = await authService.authenticate(normalizedEmail, password);
     await new Promise((resolve, reject) => req.session.regenerate((error) => error ? reject(error) : resolve()));
     req.session.adminId = admin.id;
+    await new Promise((resolve, reject) => {
+      req.session.save((error) => error ? reject(error) : resolve());
+    });
     res.json({ admin });
   },
   async me(req, res) {

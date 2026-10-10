@@ -255,6 +255,8 @@ test('login validates email and accepts normalized administrator email', async (
     .send({ email: ' ADMIN@EXAMPLE.COM ', password: 'correct horse battery staple' })
     .expect(200);
   assert.deepEqual(response.body.admin, { id: '1', email: 'admin@example.com' });
+  const currentUser = await agent.get('/api/auth/me').expect(200);
+  assert.deepEqual(currentUser.body.admin, { id: '1', email: 'admin@example.com' });
 });
 
 test('login returns a generic error for invalid credentials', async () => {
