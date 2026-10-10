@@ -7,6 +7,8 @@ import { createSessionMiddleware } from './config/session.js';
 import authRoutes from './routes/authRoutes.js';
 import blogRoutes from './routes/blogRoutes.js';
 import sectionRoutes from './routes/sectionRoutes.js';
+import adminBlogRoutes from './routes/adminBlogRoutes.js';
+import adminSectionRoutes from './routes/adminSectionRoutes.js';
 import { errorHandler, notFound } from './middleware/errors.js';
 
 const app = express();
@@ -23,7 +25,9 @@ app.use(csrf());
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/blogs', blogRoutes);
+app.use('/api/admin/blogs', adminBlogRoutes);
 app.use('/api/sections', sectionRoutes);
+app.use('/api/admin/sections', adminSectionRoutes);
 app.use(notFound);
 app.use(errorHandler);
 

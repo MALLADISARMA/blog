@@ -1,10 +1,11 @@
 import bcrypt from 'bcrypt';
 import { HttpError } from '../middleware/errors.js';
 import { adminRepository } from '../repositories/adminRepository.js';
+import { normalizeEmail } from '../utils/adminCredentials.js';
 
 export const authService = {
   async authenticate(email, password) {
-    const admin = await adminRepository.findByEmail(email.toLowerCase());
+    const admin = await adminRepository.findByEmail(normalizeEmail(email));
     if (!admin || !(await bcrypt.compare(password, admin.password_hash))) {
       throw new HttpError(401, 'Invalid email or password');
     }

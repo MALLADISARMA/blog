@@ -3,6 +3,9 @@ import connectPgSimple from 'connect-pg-simple';
 import { isMemoryMode, pool } from './database.js';
 
 export function createSessionMiddleware() {
+  if (process.env.NODE_ENV === 'production' && isMemoryMode()) {
+    throw new Error('In-memory sessions are not allowed in production. Configure PostgreSQL-backed sessions.');
+  }
   if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) {
     throw new Error('SESSION_SECRET must contain at least 32 characters in production.');
   }

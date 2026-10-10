@@ -24,7 +24,7 @@ A full-stack personal blog with a public site for reading published articles and
 
 Install the following before setup:
 
-- Node.js and npm
+- Node.js 20 or newer (LTS recommended) and npm
 - Docker Desktop with Docker Compose
 
 ## First-time setup
@@ -40,6 +40,8 @@ notepad server\.env
 ```
 
 In `server\.env`, set a private `SESSION_SECRET` and choose the administrator's `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Use a password of at least 12 characters. Keep this file private and do not commit it.
+
+In production, set `NODE_ENV=production`, use a `SESSION_SECRET` of at least 32 characters, and serve the site over HTTPS. Production sessions are stored in PostgreSQL; the server refuses to start with in-memory session storage. Session cookies are HttpOnly, Secure in production, and use SameSite=Lax. Cookie-authenticated state-changing requests require a CSRF token; the frontend API client retrieves and sends it automatically.
 
 Install the project dependencies once:
 
@@ -71,6 +73,23 @@ docker compose stop postgres
 
 The initial administrator is created using `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `server\.env`. There is no public registration route, and the database schema restricts the app to one administrator account.
 
+To provision the administrator initially, configure a valid `ADMIN_EMAIL` and an `ADMIN_PASSWORD` of at least 12 characters in `server\.env`, then run this once from the project folder:
+
+```powershell
+npm --prefix server run migrate
+node server\src\scripts\createAdmin.js
+```
+
+The provisioning command refuses to create a second administrator. It hashes the password with bcrypt and never prints the password or its hash. Application startup does not create or reset administrator credentials.
+
+To rotate the administrator password, update `ADMIN_PASSWORD` in `server\.env` to a new password of at least 12 characters, then explicitly run:
+
+```powershell
+node server\src\scripts\rotateAdminPassword.js
+```
+
+The script updates the password hash only for the existing `ADMIN_EMAIL`. Remove the temporary plaintext password from `server\.env` (or replace it with the value you intend to retain) after the command completes. Keep the environment file private and do not pass passwords as command-line arguments, where they may be recorded in shell history or process listings.
+
 Cloning this repository does not grant access to your running blog. A separate clone uses its own environment configuration and database. Access to your blog requires access to its administrator credentials or its deployed server/database.
 
 ## Useful commands
@@ -85,6 +104,21 @@ Run from the project folder:
 | `npm --prefix server run migrate` | Apply the database migration |
 | `node server\src\scripts\createAdmin.js` | Create the initial administrator from `server\.env` |
 | `docker compose stop postgres` | Stop the local PostgreSQL container |
+
+Run all automated backend and API-client tests and produce a production frontend build from the project folder:
+
+```powershell
+npm test
+npm run build
+```
+
+You can also start the components separately. Start PostgreSQL with `docker compose up -d postgres`, apply the schema with `npm --prefix server run migrate`, start the API with `npm --prefix server run dev`, and start Vite in another terminal with `npm --prefix client run dev`.
+
+## API overview
+
+Public published posts are available at `GET /api/blogs`. Use `page` (default `1`) and `limit` (default `10`, maximum `100`) for pagination, `search` for title/content search, `sectionId` to filter, and `sort` (`publishedAt`, `createdAt`, `updatedAt`, or `title`) with `order` (`asc` or `desc`). Section-filtered posts are also available from `GET /api/sections/:id/blogs`; the public section tree is at `GET /api/sections/tree`.
+
+Administrator post operations use `POST /api/admin/blogs`, `GET /api/admin/blogs`, `PUT` or `DELETE /api/admin/blogs/:id`, and `PATCH /api/admin/blogs/:id/publish` or `/unpublish`. Section changes use `POST /api/admin/sections`, `PUT /api/admin/sections/:id`, and `DELETE /api/admin/sections/:id`. Admin requests require a valid session and CSRF token. The existing `/api/blogs/admin/...` and `/api/sections/admin/...` routes remain available for compatibility.
 
 ## Project structure
 
@@ -103,3 +137,7 @@ docker-compose.yml
 - **Dependencies are missing:** Run `npm run setup`.
 - **Admin sign-in fails:** Check `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `server\.env`. The configured email and password are used when the first administrator is created; changing them later does not automatically change an existing account.
 - **Port already in use:** Stop the other process using port `4000`, `5173`, or `5432`, then retry.
+
+## Production deployment
+
+Deploy the Express API and React production build behind HTTPS. Set `NODE_ENV=production`, a private `DATABASE_URL`, a cryptographically random `SESSION_SECRET` of at least 32 characters, and `CLIENT_ORIGIN` to the exact HTTPS origin serving the frontend. Set `VITE_API_BASE_URL` at frontend build time only if the API is on a separate origin; do not put credentials or secrets into any `VITE_` variable. Apply migrations explicitly before starting the API and provision the administrator separately. Use PostgreSQL-backed sessions, allow inbound database access only from the API host, and do not publish PostgreSQL's port to the internet. The included Compose file is for local development and binds PostgreSQL to loopback only; it is not a production deployment configuration.

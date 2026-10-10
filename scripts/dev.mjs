@@ -109,7 +109,7 @@ try {
   console.log('Applying database migration...');
   run(process.execPath, ['src/db/migrate.js'], serverDir, 'Database migration');
   console.log('Ensuring administrator account exists...');
-  run(process.execPath, ['src/scripts/createAdmin.js'], serverDir, 'Administrator setup');
+  run(process.execPath, ['src/scripts/ensureAdmin.js'], serverDir, 'Administrator setup');
 
   console.log('Starting API and Vite development server...');
   startNode(['--watch', serverEntry], serverDir, 'API server');

@@ -1,5 +1,4 @@
 import { HttpError } from '../middleware/errors.js';
-import { isMemoryMode } from '../config/database.js';
 import { sectionRepository } from '../repositories/sectionRepository.js';
 
 const slugify = (text) => text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100);
@@ -16,8 +15,8 @@ export const sectionService = {
     return roots;
   },
   async save(input, id) {
-    if (id && !isMemoryMode() && !/^\d+$/.test(String(id))) throw new HttpError(400, 'Invalid section id');
-    if (input.parentId && !isMemoryMode() && !/^\d+$/.test(String(input.parentId))) {
+    if (id && !/^\d+$/.test(String(id))) throw new HttpError(400, 'Invalid section id');
+    if (input.parentId && !/^\d+$/.test(String(input.parentId))) {
       throw new HttpError(400, 'Invalid parent section id');
     }
     const slug = input.slug ? slugify(input.slug) : slugify(input.name);
@@ -41,7 +40,7 @@ export const sectionService = {
     return false;
   },
   async remove(id) {
-    if (!isMemoryMode() && !/^\d+$/.test(String(id))) throw new HttpError(400, 'Invalid section id');
+    if (!/^\d+$/.test(String(id))) throw new HttpError(400, 'Invalid section id');
     if (await sectionRepository.hasChildren(id)) throw new HttpError(409, 'Move or delete child sections first');
     if (await sectionRepository.hasPosts(id)) throw new HttpError(409, 'Move posts out of this section first');
     if (!(await sectionRepository.remove(id))) throw new HttpError(404, 'Section not found');

@@ -31,7 +31,7 @@ export const sectionRepository = {
         memoryStore.sections[index] = { ...memoryStore.sections[index], ...data };
         return memoryStore.sections[index];
       }
-      const section = { ...data, id: String(Date.now() + Math.random()) };
+      const section = { ...data, id: String(nextMemoryId(memoryStore.sections)) };
       memoryStore.sections.push(section);
       return section;
     }
@@ -69,3 +69,10 @@ export const sectionRepository = {
     return rowCount > 0;
   },
 };
+
+function nextMemoryId(items) {
+  return items.reduce((largest, item) => {
+    const id = Number(item.id);
+    return Number.isSafeInteger(id) ? Math.max(largest, id) : largest;
+  }, 0) + 1;
+}

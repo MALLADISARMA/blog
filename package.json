@@ -6,6 +6,9 @@
     "server:dev": "npm --prefix server run dev",
     "server:start": "npm --prefix server run start",
     "server:test": "npm --prefix server run test",
+    "client:test": "npm --prefix client run test",
+    "test": "npm run server:test && npm run client:test",
+    "build": "npm run client:build",
     "client:dev": "npm --prefix client run dev",
     "client:build": "npm --prefix client run build",
     "setup": "npm install --prefix server && npm install --prefix client"

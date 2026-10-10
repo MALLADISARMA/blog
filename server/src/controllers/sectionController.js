@@ -1,4 +1,5 @@
 import { validate } from '../middleware/validate.js';
+import { HttpError } from '../middleware/errors.js';
 import { sectionRepository } from '../repositories/sectionRepository.js';
 import { sectionService } from '../services/sectionService.js';
 
@@ -25,6 +26,7 @@ export const sectionController = {
     res.status(req.params.id ? 200 : 201).json({ section });
   },
   async remove(req, res) {
+    if (!/^\d+$/.test(req.params.id)) throw new HttpError(400, 'Invalid section id');
     await sectionService.remove(req.params.id);
     res.sendStatus(204);
   },
